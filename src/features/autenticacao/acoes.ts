@@ -11,14 +11,15 @@ export async function entrar(form: FormData) {
 }
 export async function cadastrar(form: FormData) {
   const supabase = await criarClienteServidor();
-  const { error } = await supabase.auth.signUp({ email: valor(form, "email"), password: valor(form, "senha"), options: { data: { nome: valor(form, "nome") } } });
+  const origem = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const { error } = await supabase.auth.signUp({ email: valor(form, "email"), password: valor(form, "senha"), options: { data: { nome: valor(form, "nome") }, emailRedirectTo: `${origem}/auth/confirmar` } });
   if (error) redirect(`/cadastro?erro=${encodeURIComponent(error.message)}`);
   redirect("/entrar?mensagem=Confira seu e-mail para confirmar o cadastro");
 }
 export async function recuperar(form: FormData) {
   const supabase = await criarClienteServidor();
   const origem = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  await supabase.auth.resetPasswordForEmail(valor(form, "email"), { redirectTo: `${origem}/auth/confirmar` });
+  await supabase.auth.resetPasswordForEmail(valor(form, "email"), { redirectTo: `${origem}/auth/confirmar?next=/redefinir-senha` });
   redirect("/entrar?mensagem=Se o e-mail existir, enviaremos as instruções");
 }
 export async function sair() { const supabase = await criarClienteServidor(); await supabase.auth.signOut(); redirect("/entrar"); }
