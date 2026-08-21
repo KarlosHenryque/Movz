@@ -1,0 +1,2 @@
+import { Cabecalho } from "@/components/cabecalho"; import { Cartao } from "@/components/cartao";
+export default function Page() { return <><Cabecalho titulo="Evolução" subtitulo="Seu progresso, série por série"/><div className="grade"><Cartao titulo="Volume no mês"><strong className="valor">0 kg</strong><p className="muted">Conclua um treino para iniciar seu histórico.</p></Cartao><Cartao titulo="Recordes"><div className="vazio"><span>↗</span><p>As melhores cargas aparecerão aqui.</p></div></Cartao></div></>; }

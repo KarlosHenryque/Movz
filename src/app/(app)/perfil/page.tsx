@@ -1,0 +1,2 @@
+import { Cabecalho } from "@/components/cabecalho"; import { Cartao } from "@/components/cartao"; import { sair } from "@/features/autenticacao/acoes";
+export default function Page() { return <><Cabecalho titulo="Perfil" subtitulo="Preferências e segurança"/><Cartao titulo="Sua conta"><p className="muted">Os dados da sessão são protegidos pelo Supabase Auth.</p><form action={sair}><button className="botao secundario">Sair da conta</button></form></Cartao></>; }

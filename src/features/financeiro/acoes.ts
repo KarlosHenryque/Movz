@@ -1,0 +1,3 @@
+"use server";
+import { revalidatePath } from "next/cache"; import { exigirUsuario } from "@/lib/autenticacao/usuario"; import { despesaSchema } from "./validacoes";
+export async function salvarDespesa(dados:unknown,id?:string){const entrada=despesaSchema.parse(dados);const {supabase,user}=await exigirUsuario();const registro={...entrada,data:entrada.data.toISOString().slice(0,10),usuario_id:user.id};const consulta=id?supabase.from("despesas").update(registro).eq("id",id).eq("usuario_id",user.id):supabase.from("despesas").insert(registro);const {error}=await consulta;if(error)throw new Error("Não foi possível salvar a despesa.");revalidatePath("/financeiro");}
