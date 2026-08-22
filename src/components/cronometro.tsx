@@ -1,3 +1,46 @@
 "use client";
 import { useEffect, useState } from "react";
-export function Cronometro({ segundosIniciais = 60 }: { segundosIniciais?: number }) { const [restante, setRestante] = useState(segundosIniciais); const [ativo, setAtivo] = useState(false); useEffect(() => { if (!ativo || restante <= 0) return; const id = window.setInterval(() => setRestante(v => v - 1), 1000); return () => window.clearInterval(id); }, [ativo, restante]); const mm = Math.floor(restante / 60); const ss = String(restante % 60).padStart(2,"0"); return <section className={`cronometro ${restante === 0 ? "terminou" : ""}`}><p>DESCANSO</p><strong>{mm}:{ss}</strong><div className="acoes"><button onClick={() => setAtivo(v => !v)}>{ativo ? "Pausar" : "Continuar"}</button><button onClick={() => { setRestante(segundosIniciais); setAtivo(true); }}>Reiniciar</button><button onClick={() => { setRestante(0); setAtivo(false); }}>Pular</button></div></section>; }
+export function Cronometro({
+  segundosIniciais = 60,
+}: {
+  segundosIniciais?: number;
+}) {
+  const [restante, setRestante] = useState(segundosIniciais);
+  const [ativo, setAtivo] = useState(false);
+  useEffect(() => {
+    if (!ativo || restante <= 0) return;
+    const id = window.setInterval(() => setRestante((v) => v - 1), 1000);
+    return () => window.clearInterval(id);
+  }, [ativo, restante]);
+  const mm = Math.floor(restante / 60);
+  const ss = String(restante % 60).padStart(2, "0");
+  return (
+    <section className={`cronometro ${restante === 0 ? "terminou" : ""}`}>
+      <p>DESCANSO</p>
+      <strong>
+        {mm}:{ss}
+      </strong>
+      <div className="acoes">
+        <button onClick={() => setAtivo((v) => !v)}>
+          {ativo ? "Pausar" : "Continuar"}
+        </button>
+        <button
+          onClick={() => {
+            setRestante(segundosIniciais);
+            setAtivo(true);
+          }}
+        >
+          Reiniciar
+        </button>
+        <button
+          onClick={() => {
+            setRestante(0);
+            setAtivo(false);
+          }}
+        >
+          Pular
+        </button>
+      </div>
+    </section>
+  );
+}
