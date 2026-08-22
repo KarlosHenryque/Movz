@@ -9,7 +9,13 @@ export async function criarClienteServidor() {
     cookies: {
       getAll: () => armazenamento.getAll(),
       setAll: (itens) => {
-        try { itens.forEach(({ name, value, options }) => armazenamento.set(name, value, options)); } catch { /* Server Components não podem gravar cookies. */ }
+        try {
+          itens.forEach(({ name, value, options }) =>
+            armazenamento.set(name, value, options),
+          );
+        } catch {
+          /* Server Components não podem gravar cookies. */
+        }
       },
     },
   });

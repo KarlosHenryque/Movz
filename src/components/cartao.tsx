@@ -1,1 +1,16 @@
-export function Cartao({ titulo, children, destaque = false }: { titulo?: string; children: React.ReactNode; destaque?: boolean }) { return <section className={`cartao ${destaque ? "destaque" : ""}`}>{titulo && <h2>{titulo}</h2>}{children}</section>; }
+export function Cartao({
+  titulo,
+  children,
+  destaque = false,
+}: {
+  titulo?: string;
+  children: React.ReactNode;
+  destaque?: boolean;
+}) {
+  return (
+    <section className={`cartao ${destaque ? "destaque" : ""}`}>
+      {titulo && <h2>{titulo}</h2>}
+      {children}
+    </section>
+  );
+}
