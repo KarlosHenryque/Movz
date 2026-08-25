@@ -7,7 +7,6 @@ type Exercicio = {
   id: string;
   nome: string;
   grupo_muscular: string;
-  descricao: string | null;
   observacoes: string | null;
   ativo: boolean;
 };
@@ -43,21 +42,18 @@ function Formulario({
         </select>
       </label>
       <label>
-        Descrição
-        <textarea name="descricao" defaultValue={item?.descricao ?? ""} />
-      </label>
-      <label>
         Observações
         <textarea name="observacoes" defaultValue={item?.observacoes ?? ""} />
       </label>
-      <label className="check">
+      <label className="switch">
         <input
           type="checkbox"
           name="ativo"
           value="true"
           defaultChecked={item?.ativo ?? true}
-        />{" "}
-        Ativo
+        />
+        <span>Ativo</span>
+        <span className="switch-slider" aria-hidden="true" />
       </label>
       <button className="botao primario">Salvar exercício</button>
     </form>
@@ -111,7 +107,6 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
                 {i.ativo ? "Ativo" : "Inativo"}
               </span>
             </div>
-            {i.descricao && <p className="muted">{i.descricao}</p>}
             <div className="acoes-item">
               <button className="botao secundario" onClick={() => abrir(i)}>
                 <Pencil size={16} />

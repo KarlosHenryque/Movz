@@ -93,14 +93,15 @@ function Formulario({
           />
         </label>
       </div>
-      <label className="check">
+      <label className="switch">
         <input
           type="checkbox"
           name="ativo"
           value="true"
           defaultChecked={item?.ativo ?? true}
-        />{" "}
-        Ativo
+        />
+        <span>Ativo</span>
+        <span className="switch-slider" aria-hidden="true" />
       </label>
       <button className="botao primario">Salvar treino</button>
     </form>
