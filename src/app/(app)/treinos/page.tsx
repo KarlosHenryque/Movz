@@ -12,7 +12,7 @@ export default async function Page() {
         .order("criado_em", { ascending: false }),
       supabase
         .from("exercicios")
-        .select("id,nome")
+        .select("id,nome,grupo_muscular")
         .eq("usuario_id", user.id)
         .eq("ativo", true)
         .order("nome"),
@@ -23,9 +23,26 @@ export default async function Page() {
         )
         .eq("usuario_id", user.id),
     ]);
+
+  // Criar mapa de exercícios por ID para fácil lookup
+  const exerciciosMap = new Map(
+    (exercicios ?? []).map((e) => [
+      e.id,
+      { nome: e.nome, grupo_muscular: e.grupo_muscular },
+    ]),
+  );
+
+  // Enriquecer planos com dados de exercícios
+  const planosEnriquecidos = (planos ?? []).map((p) => ({
+    ...p,
+    exercicios: exerciciosMap.get(p.exercicio_id) || null,
+  }));
+
   const completos = (treinos ?? []).map((t) => ({
     ...t,
-    exercicios_treino: (planos ?? []).filter((p) => p.treino_id === t.id),
+    exercicios_treino: planosEnriquecidos.filter(
+      (p) => p.treino_id === t.id,
+    ),
   }));
   return (
     <>

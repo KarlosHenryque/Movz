@@ -115,7 +115,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 0;
+  flex-wrap: wrap;
 }
 .acoes-item form {
   display: flex;
@@ -526,6 +527,58 @@ a {
   border-radius: 10px;
   padding: 8px 10px;
   font-size: 0.75rem;
+}
+.treino-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cartao-treino {
+  flex: 1;
+}
+.grupos-exercicios {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+.grupo-muscular {
+  display: grid;
+  gap: 8px;
+}
+.grupo-titulo {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--verde);
+  margin: 0;
+  padding-top: 4px;
+}
+.lista-exercicios {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.lista-exercicios li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.nome-exercicio {
+  color: var(--texto);
+  font-weight: 500;
+  flex: 1;
+}
+.repeticoes {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
 }
 @media (min-width: 760px) {
   .conteudo {

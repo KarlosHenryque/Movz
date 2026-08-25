@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { excluirDespesa, salvarDespesa } from "./acoes";
 type Categoria = { id: string; nome: string };
@@ -24,11 +25,21 @@ function Formulario({
   categorias: Categoria[];
   fechar: () => void;
 }) {
+  const router = useRouter();
+  const [carregando, setCarregando] = useState(false);
+  
   return (
     <form
       action={async (f) => {
-        await salvarDespesa(f);
-        fechar();
+        try {
+          setCarregando(true);
+          await salvarDespesa(f);
+          router.refresh();
+          fechar();
+        } catch (err) {
+          setCarregando(false);
+          throw err;
+        }
       }}
       className="formulario"
     >
@@ -40,6 +51,7 @@ function Formulario({
           defaultValue={item?.descricao}
           required
           minLength={2}
+          disabled={carregando}
         />
       </label>
       <div className="campos-duplos">
@@ -52,6 +64,7 @@ function Formulario({
             min="0.01"
             defaultValue={item?.valor}
             required
+            disabled={carregando}
           />
         </label>
         <label>
@@ -61,12 +74,13 @@ function Formulario({
             type="date"
             defaultValue={item?.data ?? new Date().toISOString().slice(0, 10)}
             required
+            disabled={carregando}
           />
         </label>
       </div>
       <label>
         Categoria
-        <select name="categoria_id" defaultValue={item?.categoria_id}>
+        <select name="categoria_id" defaultValue={item?.categoria_id} disabled={carregando}>
           {categorias.map((c) => (
             <option key={c.id} value={c.id}>
               {c.nome}
@@ -76,16 +90,18 @@ function Formulario({
       </label>
       <label>
         Tipo
-        <select name="tipo" defaultValue={item?.tipo ?? "VARIAVEL"}>
+        <select name="tipo" defaultValue={item?.tipo ?? "VARIAVEL"} disabled={carregando}>
           <option value="VARIAVEL">Variável</option>
           <option value="FIXA">Fixa</option>
         </select>
       </label>
       <label>
         Observação
-        <textarea name="observacao" defaultValue={item?.observacao ?? ""} />
+        <textarea name="observacao" defaultValue={item?.observacao ?? ""} disabled={carregando} />
       </label>
-      <button className="botao primario">Salvar despesa</button>
+      <button className="botao primario" disabled={carregando}>
+        {carregando ? "Salvando..." : "Salvar despesa"}
+      </button>
     </form>
   );
 }
@@ -96,9 +112,12 @@ export function GerenciadorFinanceiro({
   itens: Despesa[];
   categorias: Categoria[];
 }) {
+  const router = useRouter();
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState<Despesa | null | undefined>();
+  const [carregandoExclusao, setCarregandoExclusao] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  
   const filtrados = useMemo(
     () =>
       itens.filter((i) =>
@@ -106,18 +125,33 @@ export function GerenciadorFinanceiro({
       ),
     [itens, busca],
   );
+  
   const total = itens.reduce((s, i) => s + Number(i.valor), 0),
     fixo = itens
       .filter((i) => i.tipo === "FIXA")
       .reduce((s, i) => s + Number(i.valor), 0);
+      
   const abrir = (i: Despesa | null) => {
     setAberto(i);
     dialog.current?.showModal();
   };
+  
   const fechar = () => {
     dialog.current?.close();
     setAberto(undefined);
   };
+
+  const handleExcluir = async (id: string, formData: FormData) => {
+    try {
+      setCarregandoExclusao(id);
+      await excluirDespesa(formData);
+      router.refresh();
+    } catch (err) {
+      setCarregandoExclusao(null);
+      throw err;
+    }
+  };
+  
   return (
     <>
       <button
@@ -176,15 +210,18 @@ export function GerenciadorFinanceiro({
                 <Pencil size={16} />
               </button>
               <form
-                action={excluirDespesa}
+                action={(f) => handleExcluir(i.id, f)}
                 onSubmit={(e) => {
-                  if (!confirm(`Excluir ${i.descricao}?`)) e.preventDefault();
+                  if (carregandoExclusao === i.id || !confirm(`Excluir ${i.descricao}?`)) {
+                    e.preventDefault();
+                  }
                 }}
               >
                 <input type="hidden" name="id" value={i.id} />
                 <button
                   className="icone perigo"
                   aria-label={`Excluir ${i.descricao}`}
+                  disabled={carregandoExclusao === i.id}
                 >
                   <Trash2 size={16} />
                 </button>
