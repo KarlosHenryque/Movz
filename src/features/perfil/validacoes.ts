@@ -24,13 +24,6 @@ export const senhaForteSchema = z
   .regex(/[0-9]/, "A senha deve incluir um número")
   .regex(/[^A-Za-z0-9]/, "A senha deve incluir um símbolo");
 
-export const senhaForteSchema = z.string()
-  .min(12, "A senha deve ter ao menos 12 caracteres")
-  .regex(/[a-z]/, "Inclua uma letra minúscula")
-  .regex(/[A-Z]/, "Inclua uma letra maiúscula")
-  .regex(/[0-9]/, "Inclua um número")
-  .regex(/[^A-Za-z0-9]/, "Inclua um símbolo");
-
 const camposNovaSenha = {
   nova_senha: senhaForteSchema,
   confirmar_senha: z.string(),
