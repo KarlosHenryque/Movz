@@ -14,6 +14,7 @@ export const gruposMusculares = [
 export const exercicioSchema = z.object({
   nome: z.string().trim().min(2, "Informe o nome"),
   grupo_muscular: z.enum(gruposMusculares),
+  descricao: z.string().trim().max(500).optional(),
   observacoes: z.string().trim().max(1000).optional(),
   ativo: z.boolean().default(true),
 });

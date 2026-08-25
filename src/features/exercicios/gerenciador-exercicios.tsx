@@ -1,16 +1,20 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Modal } from "@/components/modal";
 import { excluirExercicio, salvarExercicio } from "./acoes";
 import { gruposMusculares } from "./validacoes";
+
 type Exercicio = {
   id: string;
   nome: string;
   grupo_muscular: string;
+  descricao: string | null;
   observacoes: string | null;
   ativo: boolean;
 };
+
 function Formulario({
   item,
   fechar,
@@ -20,26 +24,31 @@ function Formulario({
 }) {
   const router = useRouter();
   const [carregando, setCarregando] = useState(false);
-  
+
+  const handleSalvar = async (formData: FormData) => {
+    try {
+      setCarregando(true);
+      await salvarExercicio(formData);
+      router.refresh();
+      fechar();
+    } catch (err) {
+      setCarregando(false);
+      throw err;
+    }
+  };
+
   return (
-    <form
-      action={async (f) => {
-        try {
-          setCarregando(true);
-          await salvarExercicio(f);
-          router.refresh();
-          fechar();
-        } catch (err) {
-          setCarregando(false);
-          throw err;
-        }
-      }}
-      className="formulario"
-    >
+    <form action={handleSalvar} className="formulario">
       <input type="hidden" name="id" value={item?.id ?? ""} />
       <label>
         Nome
-        <input name="nome" defaultValue={item?.nome} required minLength={2} disabled={carregando} />
+        <input
+          name="nome"
+          defaultValue={item?.nome}
+          required
+          minLength={2}
+          disabled={carregando}
+        />
       </label>
       <label>
         Grupo muscular
@@ -54,19 +63,33 @@ function Formulario({
         </select>
       </label>
       <label>
-        Observações
-        <textarea name="observacoes" defaultValue={item?.observacoes ?? ""} disabled={carregando} />
-      </label>
-      <label className="switch">
-        <input
-          type="checkbox"
-          name="ativo"
-          value="true"
-          defaultChecked={item?.ativo ?? true}
+        Descrição
+        <textarea
+          name="descricao"
+          defaultValue={item?.descricao ?? ""}
           disabled={carregando}
         />
-        <span>Ativo</span>
-        <span className="switch-slider" aria-hidden="true" />
+      </label>
+      <label>
+        Observações
+        <textarea
+          name="observacoes"
+          defaultValue={item?.observacoes ?? ""}
+          disabled={carregando}
+        />
+      </label>
+      <label className="switch-campo">
+        <span>Exercício ativo</span>
+        <span className="switch">
+          <input
+            type="checkbox"
+            name="ativo"
+            value="true"
+            defaultChecked={item?.ativo ?? true}
+            disabled={carregando}
+          />
+          <span className="switch-slider" aria-hidden="true" />
+        </span>
       </label>
       <button className="botao primario" disabled={carregando}>
         {carregando ? "Salvando..." : "Salvar exercício"}
@@ -74,28 +97,29 @@ function Formulario({
     </form>
   );
 }
+
 export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState<Exercicio | null | undefined>();
-  const [carregandoExclusao, setCarregandoExclusao] = useState<string | null>(null);
+  const [carregandoExclusao, setCarregandoExclusao] = useState<string | null>(
+    null
+  );
   const dialog = useRef<HTMLDialogElement>(null);
-  
+
   const filtrados = useMemo(
     () =>
       itens.filter((i) =>
-        `${i.nome} ${i.grupo_muscular}`
-          .toLowerCase()
-          .includes(busca.toLowerCase()),
+        `${i.nome} ${i.grupo_muscular}`.toLowerCase().includes(busca.toLowerCase())
       ),
-    [itens, busca],
+    [itens, busca]
   );
-  
+
   const abrir = (i: Exercicio | null) => {
     setAberto(i);
     dialog.current?.showModal();
   };
-  
+
   const fechar = () => {
     dialog.current?.close();
     setAberto(undefined);
@@ -111,7 +135,7 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
       throw err;
     }
   };
-  
+
   return (
     <>
       <div className="barra-busca">
@@ -139,21 +163,28 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
                 {i.ativo ? "Ativo" : "Inativo"}
               </span>
             </div>
+            {i.descricao && <p className="muted">{i.descricao}</p>}
             <div className="acoes-item">
-              <button className="botao secundario" onClick={() => abrir(i)}>
+              <button
+                className="botao secundario"
+                onClick={() => abrir(i)}
+              >
                 <Pencil size={16} />
                 Editar
               </button>
               <form
                 action={(f) => handleExcluir(i.id, f)}
                 onSubmit={(e) => {
-                  if (carregandoExclusao === i.id || !confirm(`Excluir ${i.nome}?`)) {
+                  if (
+                    carregandoExclusao === i.id ||
+                    !confirm(`Excluir ${i.nome}?`)
+                  ) {
                     e.preventDefault();
                   }
                 }}
               >
                 <input type="hidden" name="id" value={i.id} />
-                <button 
+                <button
                   className="botao perigo"
                   disabled={carregandoExclusao === i.id}
                 >
@@ -176,21 +207,16 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
           </div>
         )}
       </div>
-      <dialog
-        ref={dialog}
-        className="modal"
-        onClose={() => setAberto(undefined)}
+      <Modal
+        dialogRef={dialog}
+        aberto={aberto !== undefined}
+        titulo={aberto ? "Editar exercício" : "Novo exercício"}
+        fechar={fechar}
       >
-        <div className="linha">
-          <h2>{aberto ? "Editar exercício" : "Novo exercício"}</h2>
-          <button className="icone" onClick={fechar} aria-label="Fechar">
-            <X />
-          </button>
-        </div>
         {aberto !== undefined && (
           <Formulario item={aberto ?? undefined} fechar={fechar} />
         )}
-      </dialog>
+      </Modal>
     </>
   );
 }

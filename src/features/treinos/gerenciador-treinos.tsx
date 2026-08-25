@@ -1,20 +1,44 @@
 "use client";
-import { useRef, useState } from "react";
+
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Plus, Pencil, Trash2, X } from "lucide-react";
-import { excluirTreino, iniciarTreino, salvarTreino } from "./acoes";
-type Exercicio = { id: string; nome: string };
+import {
+  Circle,
+  EllipsisVertical,
+  Pencil,
+  Play,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { Modal } from "@/components/modal";
+import { BotaoSubmit } from "@/components/botao-submit";
+
+import {
+  excluirTreino,
+  iniciarTreino,
+  salvarTreino,
+} from "./acoes";
+
+type Exercicio = {
+  id: string;
+  nome: string;
+};
+
 type ExercicioTreino = {
+  id: string;
   exercicio_id: string;
+  ordem: number;
   series_planejadas: number;
   repeticoes_planejadas: string;
   carga_sugerida: number | null;
   descanso_segundos: number;
+
   exercicios?: {
     nome: string;
     grupo_muscular: string;
   } | null;
 };
+
 type Treino = {
   id: string;
   nome: string;
@@ -22,7 +46,17 @@ type Treino = {
   ativo: boolean;
   exercicios_treino: ExercicioTreino[];
 };
-function Formulario({
+
+type ExercicioForm = {
+  exercicio_id: string;
+  series: string;
+  repeticoes: string;
+  carga: string;
+  descanso: string;
+  nome?: string;
+};
+
+function FormularioTreino({
   item,
   exercicios,
   fechar,
@@ -32,157 +66,600 @@ function Formulario({
   fechar: () => void;
 }) {
   const router = useRouter();
+
   const [carregando, setCarregando] = useState(false);
-  const plano = item?.exercicios_treino[0];
-  
+
+  const [exerciciosAdicionados, setExerciciosAdicionados] = useState<
+    ExercicioForm[]
+  >(
+    item?.exercicios_treino.map((e) => ({
+      exercicio_id: e.exercicio_id,
+      series: String(e.series_planejadas),
+      repeticoes: e.repeticoes_planejadas,
+      carga: String(e.carga_sugerida ?? 0),
+      descanso: String(e.descanso_segundos),
+      nome: e.exercicios?.nome,
+    })) ?? [],
+  );
+
+  const [selecionadoAtual, setSelecionadoAtual] = useState("");
+
+  const adicionarExercicio = () => {
+    if (!selecionadoAtual) {
+      return;
+    }
+
+    const exercicio = exercicios.find(
+      (e) => e.id === selecionadoAtual,
+    );
+
+    if (!exercicio) {
+      return;
+    }
+
+    const jaAdicionado = exerciciosAdicionados.some(
+      (item) => item.exercicio_id === exercicio.id,
+    );
+
+    if (jaAdicionado) {
+      setSelecionadoAtual("");
+      return;
+    }
+
+    setExerciciosAdicionados((anteriores) => [
+      ...anteriores,
+      {
+        exercicio_id: exercicio.id,
+        series: "3",
+        repeticoes: "10",
+        carga: "0",
+        descanso: "60",
+        nome: exercicio.nome,
+      },
+    ]);
+
+    setSelecionadoAtual("");
+  };
+
+  const atualizarExercicio = (
+    index: number,
+    campo: keyof ExercicioForm,
+    valor: string,
+  ) => {
+    setExerciciosAdicionados((anteriores) =>
+      anteriores.map((exercicio, indice) =>
+        indice === index
+          ? {
+              ...exercicio,
+              [campo]: valor,
+            }
+          : exercicio,
+      ),
+    );
+  };
+
+  const removerExercicio = (index: number) => {
+    setExerciciosAdicionados((anteriores) =>
+      anteriores.filter((_, indice) => indice !== index),
+    );
+  };
+
+  const handleSalvar = async (formData: FormData) => {
+    if (carregando) {
+      return;
+    }
+
+    try {
+      setCarregando(true);
+
+      exerciciosAdicionados.forEach((exercicio, indice) => {
+        formData.append(
+          `exercicio_${indice}_id`,
+          exercicio.exercicio_id,
+        );
+
+        formData.append(
+          `exercicio_${indice}_series`,
+          exercicio.series,
+        );
+
+        formData.append(
+          `exercicio_${indice}_repeticoes`,
+          exercicio.repeticoes,
+        );
+
+        formData.append(
+          `exercicio_${indice}_carga`,
+          exercicio.carga,
+        );
+
+        formData.append(
+          `exercicio_${indice}_descanso`,
+          exercicio.descanso,
+        );
+      });
+
+      formData.append(
+        "exercicios_count",
+        String(exerciciosAdicionados.length),
+      );
+
+      await salvarTreino(formData);
+
+      router.refresh();
+
+      fechar();
+    } catch (erro) {
+      console.error("Erro ao salvar treino:", erro);
+      setCarregando(false);
+    }
+  };
+
   return (
-    <form
-      action={async (f) => {
-        try {
-          setCarregando(true);
-          await salvarTreino(f);
-          router.refresh();
-          fechar();
-        } catch (err) {
-          setCarregando(false);
-          throw err;
-        }
-      }}
-      className="formulario"
-    >
-      <input type="hidden" name="id" value={item?.id ?? ""} />
+    <form action={handleSalvar} className="formulario">
+      <input
+        type="hidden"
+        name="id"
+        value={item?.id ?? ""}
+      />
+
       <label>
         Nome
-        <input name="nome" defaultValue={item?.nome} required disabled={carregando} />
+
+        <input
+          name="nome"
+          defaultValue={item?.nome ?? ""}
+          required
+          disabled={carregando}
+          placeholder="Ex.: Treino A"
+        />
       </label>
+
       <label>
         Descrição
-        <textarea name="descricao" defaultValue={item?.descricao ?? ""} disabled={carregando} />
-      </label>
-      <label>
-        Exercício
-        <select name="exercicio_id" defaultValue={plano?.exercicio_id} disabled={carregando}>
-          <option value="">Sem exercício</option>
-          {exercicios.map((e) => (
-            <option value={e.id} key={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="campos-duplos">
-        <label>
-          Séries
-          <input
-            name="series"
-            type="number"
-            min="1"
-            max="20"
-            defaultValue={plano?.series_planejadas ?? 3}
-            disabled={carregando}
-          />
-        </label>
-        <label>
-          Repetições
-          <input
-            name="repeticoes"
-            defaultValue={plano?.repeticoes_planejadas ?? "10"}
-            disabled={carregando}
-          />
-        </label>
-        <label>
-          Carga sugerida
-          <input
-            name="carga"
-            type="number"
-            min="0"
-            step="0.5"
-            defaultValue={plano?.carga_sugerida ?? 0}
-            disabled={carregando}
-          />
-        </label>
-        <label>
-          Descanso (s)
-          <input
-            name="descanso"
-            type="number"
-            min="0"
-            max="3600"
-            defaultValue={plano?.descanso_segundos ?? 60}
-            disabled={carregando}
-          />
-        </label>
-      </div>
-      <label className="switch">
-        <input
-          type="checkbox"
-          name="ativo"
-          value="true"
-          defaultChecked={item?.ativo ?? true}
+
+        <textarea
+          name="descricao"
+          defaultValue={item?.descricao ?? ""}
           disabled={carregando}
+          placeholder="Ex.: Peito + Ombro + Tríceps"
         />
-        <span>Ativo</span>
-        <span className="switch-slider" aria-hidden="true" />
       </label>
-      <button className="botao primario" disabled={carregando}>
-        {carregando ? "Salvando..." : "Salvar treino"}
+
+      <section className="lista-tarefas-editor">
+        <h3>Exercícios do treino</h3>
+
+        <div className="adicionar-exercicio">
+          <label>
+            Adicionar exercício
+
+            <select
+              value={selecionadoAtual}
+              onChange={(event) =>
+                setSelecionadoAtual(event.target.value)
+              }
+              disabled={carregando}
+            >
+              <option value="">
+                Selecione um exercício...
+              </option>
+
+              {exercicios.map((exercicio) => (
+                <option
+                  key={exercicio.id}
+                  value={exercicio.id}
+                >
+                  {exercicio.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className="botao primario"
+            onClick={adicionarExercicio}
+            disabled={!selecionadoAtual || carregando}
+          >
+            <Plus size={16} />
+
+            Adicionar
+          </button>
+        </div>
+
+        {exerciciosAdicionados.length > 0 ? (
+          <div className="tarefas-editor">
+            {exerciciosAdicionados.map(
+              (exercicio, indice) => (
+                <div
+                  key={`${exercicio.exercicio_id}-${indice}`}
+                  className="tarefa-editor"
+                >
+                  <div className="tarefa-editor-cabecalho">
+                    <Circle
+                      className="tarefa-editor-icone"
+                      size={18}
+                    />
+
+                    <span className="tarefa-editor-nome">
+                      {exercicio.nome}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="icone perigo"
+                      onClick={() =>
+                        removerExercicio(indice)
+                      }
+                      disabled={carregando}
+                      aria-label={`Remover ${exercicio.nome}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <div className="campos-duplos tarefa-editor-campos">
+                    <label>
+                      Séries
+
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={exercicio.series}
+                        onChange={(event) =>
+                          atualizarExercicio(
+                            indice,
+                            "series",
+                            event.target.value,
+                          )
+                        }
+                        disabled={carregando}
+                      />
+                    </label>
+
+                    <label>
+                      Repetições
+
+                      <input
+                        type="text"
+                        value={exercicio.repeticoes}
+                        onChange={(event) =>
+                          atualizarExercicio(
+                            indice,
+                            "repeticoes",
+                            event.target.value,
+                          )
+                        }
+                        placeholder="10 ou 8-10"
+                        disabled={carregando}
+                      />
+                    </label>
+
+                    <label>
+                      Carga (kg)
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={exercicio.carga}
+                        onChange={(event) =>
+                          atualizarExercicio(
+                            indice,
+                            "carga",
+                            event.target.value,
+                          )
+                        }
+                        disabled={carregando}
+                      />
+                    </label>
+
+                    <label>
+                      Descanso (s)
+
+                      <input
+                        type="number"
+                        min="0"
+                        max="3600"
+                        value={exercicio.descanso}
+                        onChange={(event) =>
+                          atualizarExercicio(
+                            indice,
+                            "descanso",
+                            event.target.value,
+                          )
+                        }
+                        disabled={carregando}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        ) : (
+          <p className="muted">
+            Nenhum exercício adicionado ainda.
+          </p>
+        )}
+      </section>
+
+      <label className="switch-campo">
+        <span>Treino ativo</span>
+
+        <span className="switch">
+          <input
+            type="checkbox"
+            name="ativo"
+            value="true"
+            defaultChecked={item?.ativo ?? true}
+            disabled={carregando}
+          />
+
+          <span
+            className="switch-slider"
+            aria-hidden="true"
+          />
+        </span>
+      </label>
+
+      <button
+        type="submit"
+        className="botao primario"
+        disabled={carregando}
+      >
+        {carregando
+          ? "Salvando..."
+          : item
+            ? "Salvar alterações"
+            : "Criar treino"}
       </button>
     </form>
   );
 }
 
-function agruparPorGrupoMuscular(exercicios: ExercicioTreino[]) {
-  const grupos: Record<string, ExercicioTreino[]> = {};
-  exercicios.forEach((ex) => {
-    const grupo = ex.exercicios?.grupo_muscular ?? "OUTROS";
-    if (!grupos[grupo]) grupos[grupo] = [];
-    grupos[grupo].push(ex);
-  });
-  return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
-}
+function CardTreino({
+  treino,
+  abrir,
+  carregandoExclusao,
+  handleExcluir,
+}: {
+  treino: Treino;
+  abrir: (treino: Treino) => void;
+  carregandoExclusao: string | null;
+  handleExcluir: (
+    id: string,
+    formData: FormData,
+  ) => Promise<void>;
+}) {
+  const exerciciosOrdenados = [
+    ...treino.exercicios_treino,
+  ].sort((a, b) => a.ordem - b.ordem);
 
-function CardTreino({ treino }: { treino: Treino }) {
-  const gruposExercicios = agruparPorGrupoMuscular(treino.exercicios_treino);
-  const totalExercicios = treino.exercicios_treino.length;
+  const totalExercicios =
+    exerciciosOrdenados.length;
+
+  const [menuAberto, setMenuAberto] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function fecharAoClicarFora(event: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setMenuAberto(false);
+      }
+    }
+
+    function fecharComEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuAberto(false);
+      }
+    }
+
+    document.addEventListener("mousedown", fecharAoClicarFora);
+    document.addEventListener("keydown", fecharComEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", fecharAoClicarFora);
+      document.removeEventListener("keydown", fecharComEscape);
+    };
+  }, []);
 
   return (
     <article className="cartao cartao-treino">
-      <div className="linha">
-        <div>
-          <span className={treino.ativo ? "status ativo" : "status"}>
-            {treino.ativo ? "Ativo" : "Inativo"}
+      <div className="treino-cabecalho">
+        <div className="treino-identificacao">
+          <span
+            className={
+              treino.ativo
+                ? "status ativo"
+                : "status"
+            }
+          >
+            {treino.ativo
+              ? "Ativo"
+              : "Inativo"}
           </span>
+
           <h2>{treino.nome}</h2>
+
+          {treino.descricao && (
+            <p className="muted treino-descricao">
+              {treino.descricao}
+            </p>
+          )}
+        </div>
+
+        <div
+          ref={menuRef}
+          className="menu-acoes"
+        >
+          <button
+            type="button"
+            className="menu-acoes-botao"
+            aria-label="Mais opções"
+            aria-expanded={menuAberto}
+            aria-haspopup="menu"
+            onClick={() =>
+              setMenuAberto((aberto) => !aberto)
+            }
+          >
+            <EllipsisVertical size={21} />
+          </button>
+
+          {menuAberto && (
+            <div
+              className="menu-acoes-conteudo"
+              role="menu"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuAberto(false);
+                  abrir(treino);
+                }}
+              >
+                <Pencil size={16} />
+                Editar
+              </button>
+
+              <form
+                action={(formData) =>
+                  handleExcluir(
+                    treino.id,
+                    formData,
+                  )
+                }
+                onSubmit={(event) => {
+                  if (
+                    carregandoExclusao ===
+                      treino.id ||
+                    !window.confirm(
+                      `Deseja excluir o treino "${treino.nome}"?`,
+                    )
+                  ) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  setMenuAberto(false);
+                }}
+              >
+                <input
+                  type="hidden"
+                  name="id"
+                  value={treino.id}
+                />
+
+                <button
+                  type="submit"
+                  role="menuitem"
+                  className="acao-excluir"
+                  disabled={
+                    carregandoExclusao ===
+                    treino.id
+                  }
+                >
+                  <Trash2 size={16} />
+
+                  {carregandoExclusao ===
+                  treino.id
+                    ? "Excluindo..."
+                    : "Excluir"}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
-      {treino.descricao && <p className="muted">{treino.descricao}</p>}
 
       {totalExercicios > 0 ? (
-        <div className="grupos-exercicios">
-          {gruposExercicios.map(([grupo, exercicios]) => (
-            <div key={grupo} className="grupo-muscular">
-              <h3 className="grupo-titulo">{grupo}</h3>
-              <ul className="lista-exercicios">
-                {exercicios.map((ex) => (
-                  <li key={ex.exercicio_id}>
-                    <span className="nome-exercicio">
-                      {ex.exercicios?.nome ?? "Exercício desconhecido"}
-                    </span>
-                    <span className="repeticoes">
-                      {ex.series_planejadas}×{ex.repeticoes_planejadas}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        <ul className="lista-exercicios lista-treino">
+          {exerciciosOrdenados.map(
+            (exercicio, indice) => (
+              <li key={exercicio.id}>
+                <span className="todo-numero">
+                  {indice + 1}
+                </span>
+
+                <span className="todo-conteudo">
+                  <span className="nome-exercicio">
+                    {exercicio.exercicios
+                      ?.nome ??
+                      "Exercício desconhecido"}
+                  </span>
+
+                  <span className="todo-detalhe">
+                    {exercicio.exercicios
+                      ?.grupo_muscular ??
+                      "OUTROS"}
+                    {" · "}
+                    {
+                      exercicio.series_planejadas
+                    }{" "}
+                    séries
+                    {" · "}
+                    {
+                      exercicio.repeticoes_planejadas
+                    }{" "}
+                    repetições
+                    {" · "}
+                    {
+                      exercicio.descanso_segundos
+                    }
+                    s descanso
+                  </span>
+                </span>
+
+                <span className="repeticoes">
+                  {exercicio.carga_sugerida ??
+                    0}{" "}
+                  kg
+                </span>
+              </li>
+            ),
+          )}
+        </ul>
       ) : (
-        <p className="muted">Sem exercícios cadastrados</p>
+        <p className="muted">
+          Sem exercícios cadastrados.
+        </p>
       )}
+
+      <div className="treino-rodape">
+        {treino.ativo &&
+          totalExercicios > 0 && (
+            <form action={iniciarTreino}>
+              <input
+                type="hidden"
+                name="id"
+                value={treino.id}
+              />
+
+              <input
+                type="hidden"
+                name="nome"
+                value={treino.nome}
+              />
+
+              <BotaoSubmit
+                className="botao primario iniciar-treino"
+                pendente="Iniciando..."
+              >
+                <Play size={17} />
+                Iniciar treino
+              </BotaoSubmit>
+            </form>
+          )}
+      </div>
     </article>
   );
 }
+
 export function GerenciadorTreinos({
   itens,
   exercicios,
@@ -191,99 +668,111 @@ export function GerenciadorTreinos({
   exercicios: Exercicio[];
 }) {
   const router = useRouter();
-  const [aberto, setAberto] = useState<Treino | null | undefined>();
-  const [carregandoExclusao, setCarregandoExclusao] = useState<string | null>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
-  
-  const abrir = (i: Treino | null) => {
-    setAberto(i);
+
+  const [aberto, setAberto] = useState<
+    Treino | null | undefined
+  >();
+
+  const [
+    carregandoExclusao,
+    setCarregandoExclusao,
+  ] = useState<string | null>(null);
+
+  const dialog =
+    useRef<HTMLDialogElement>(null);
+
+  const abrir = (
+    treino: Treino | null,
+  ) => {
+    setAberto(treino);
+
     dialog.current?.showModal();
   };
-  
+
   const fechar = () => {
     dialog.current?.close();
+
     setAberto(undefined);
   };
 
-  const handleExcluir = async (id: string, formData: FormData) => {
+  const handleExcluir = async (
+    id: string,
+    formData: FormData,
+  ) => {
+    if (carregandoExclusao) {
+      return;
+    }
+
     try {
       setCarregandoExclusao(id);
+
       await excluirTreino(formData);
+
       router.refresh();
-    } catch (err) {
+    } catch (erro) {
+      console.error(
+        "Erro ao excluir treino:",
+        erro,
+      );
+    } finally {
       setCarregandoExclusao(null);
-      throw err;
     }
   };
-  
+
   return (
     <>
-      <button className="botao primario" onClick={() => abrir(null)}>
+      <button
+        type="button"
+        className="botao primario"
+        onClick={() => abrir(null)}
+      >
         <Plus size={18} />
         Novo treino
       </button>
+
       <div className="grade lista-cards">
-        {itens.map((i) => (
-          <div key={i.id} className="treino-container">
-            <CardTreino treino={i} />
-            <div className="acoes-item">
-              {i.ativo && i.exercicios_treino.length > 0 && (
-                <form action={iniciarTreino}>
-                  <input type="hidden" name="id" value={i.id} />
-                  <input type="hidden" name="nome" value={i.nome} />
-                  <button className="botao primario">
-                    <Play size={16} />
-                    Iniciar
-                  </button>
-                </form>
-              )}
-              <button className="botao secundario" onClick={() => abrir(i)}>
-                <Pencil size={16} />
-                Editar
-              </button>
-              <form
-                action={(f) => handleExcluir(i.id, f)}
-                onSubmit={(e) => {
-                  if (carregandoExclusao === i.id || !confirm(`Excluir ${i.nome}?`)) {
-                    e.preventDefault();
-                  }
-                }}
-              >
-                <input type="hidden" name="id" value={i.id} />
-                <button 
-                  className="botao perigo"
-                  disabled={carregandoExclusao === i.id}
-                >
-                  <Trash2 size={16} />
-                  {carregandoExclusao === i.id ? "Excluindo..." : "Excluir"}
-                </button>
-              </form>
-            </div>
-          </div>
+        {itens.map((treino) => (
+          <CardTreino
+            key={treino.id}
+            treino={treino}
+            abrir={abrir}
+            carregandoExclusao={
+              carregandoExclusao
+            }
+            handleExcluir={handleExcluir}
+          />
         ))}
-        {!itens.length && (
+
+        {itens.length === 0 && (
           <div className="cartao vazio">
             <span>🏋️</span>
-            <h2>Monte sua primeira ficha</h2>
-            <p>Cadastre antes um exercício e depois crie seu treino.</p>
+
+            <h2>
+              Monte sua primeira ficha
+            </h2>
+
+            <p>
+              Cadastre antes um exercício
+              e depois crie seu treino.
+            </p>
           </div>
         )}
       </div>
-      <dialog ref={dialog} className="modal">
-        <div className="linha">
-          <h2>{aberto ? "Editar treino" : "Novo treino"}</h2>
-          <button className="icone" onClick={fechar} aria-label="Fechar">
-            <X />
-          </button>
-        </div>
+
+      <Modal
+        dialogRef={dialog}
+        aberto={aberto !== undefined}
+        titulo={aberto ? "Editar treino" : "Novo treino"}
+        fechar={fechar}
+      >
         {aberto !== undefined && (
-          <Formulario
+          <FormularioTreino
             item={aberto ?? undefined}
             exercicios={exercicios}
             fechar={fechar}
           />
         )}
-      </dialog>
+      </Modal>
     </>
   );
 }

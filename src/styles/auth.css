@@ -1,0 +1,6 @@
+.auth-shell { min-height:100dvh; display:grid; place-items:center; padding:20px; }
+.auth-card { width:min(100%,420px); padding:28px; border:1px solid var(--borda); border-radius:26px; background:#fff; }
+.marca { font-size:1.5rem; font-weight:900; }
+.marca span { color:#73a72d; }
+.auth-card h1 { margin:28px 0 5px; font-size:2rem; }
+.links-auth { display:flex; justify-content:space-between; margin-top:18px; color:var(--verde); font-size:.85rem; }

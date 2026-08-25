@@ -1,0 +1,4 @@
+.perfil-grade { align-items:start; }
+.perfil-grade .cartao { height:100%; }
+.zona-conta { margin-top:14px; }
+@media (min-width:760px) { .perfil-grade>section:first-child{grid-row:span 2}.zona-conta{max-width:50%} }
