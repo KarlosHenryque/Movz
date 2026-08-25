@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { excluirExercicio, salvarExercicio } from "./acoes";
 import { gruposMusculares } from "./validacoes";
@@ -17,24 +18,35 @@ function Formulario({
   item?: Exercicio;
   fechar: () => void;
 }) {
+  const router = useRouter();
+  const [carregando, setCarregando] = useState(false);
+  
   return (
     <form
       action={async (f) => {
-        await salvarExercicio(f);
-        fechar();
+        try {
+          setCarregando(true);
+          await salvarExercicio(f);
+          router.refresh();
+          fechar();
+        } catch (err) {
+          setCarregando(false);
+          throw err;
+        }
       }}
       className="formulario"
     >
       <input type="hidden" name="id" value={item?.id ?? ""} />
       <label>
         Nome
-        <input name="nome" defaultValue={item?.nome} required minLength={2} />
+        <input name="nome" defaultValue={item?.nome} required minLength={2} disabled={carregando} />
       </label>
       <label>
         Grupo muscular
         <select
           name="grupo_muscular"
           defaultValue={item?.grupo_muscular ?? "PEITO"}
+          disabled={carregando}
         >
           {gruposMusculares.map((g) => (
             <option key={g}>{g}</option>
@@ -43,7 +55,7 @@ function Formulario({
       </label>
       <label>
         Observações
-        <textarea name="observacoes" defaultValue={item?.observacoes ?? ""} />
+        <textarea name="observacoes" defaultValue={item?.observacoes ?? ""} disabled={carregando} />
       </label>
       <label className="switch">
         <input
@@ -51,18 +63,24 @@ function Formulario({
           name="ativo"
           value="true"
           defaultChecked={item?.ativo ?? true}
+          disabled={carregando}
         />
         <span>Ativo</span>
         <span className="switch-slider" aria-hidden="true" />
       </label>
-      <button className="botao primario">Salvar exercício</button>
+      <button className="botao primario" disabled={carregando}>
+        {carregando ? "Salvando..." : "Salvar exercício"}
+      </button>
     </form>
   );
 }
 export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
+  const router = useRouter();
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState<Exercicio | null | undefined>();
+  const [carregandoExclusao, setCarregandoExclusao] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  
   const filtrados = useMemo(
     () =>
       itens.filter((i) =>
@@ -72,14 +90,28 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
       ),
     [itens, busca],
   );
+  
   const abrir = (i: Exercicio | null) => {
     setAberto(i);
     dialog.current?.showModal();
   };
+  
   const fechar = () => {
     dialog.current?.close();
     setAberto(undefined);
   };
+
+  const handleExcluir = async (id: string, formData: FormData) => {
+    try {
+      setCarregandoExclusao(id);
+      await excluirExercicio(formData);
+      router.refresh();
+    } catch (err) {
+      setCarregandoExclusao(null);
+      throw err;
+    }
+  };
+  
   return (
     <>
       <div className="barra-busca">
@@ -113,15 +145,20 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
                 Editar
               </button>
               <form
-                action={excluirExercicio}
+                action={(f) => handleExcluir(i.id, f)}
                 onSubmit={(e) => {
-                  if (!confirm(`Excluir ${i.nome}?`)) e.preventDefault();
+                  if (carregandoExclusao === i.id || !confirm(`Excluir ${i.nome}?`)) {
+                    e.preventDefault();
+                  }
                 }}
               >
                 <input type="hidden" name="id" value={i.id} />
-                <button className="botao perigo">
+                <button 
+                  className="botao perigo"
+                  disabled={carregandoExclusao === i.id}
+                >
                   <Trash2 size={16} />
-                  Excluir
+                  {carregandoExclusao === i.id ? "Excluindo..." : "Excluir"}
                 </button>
               </form>
             </div>
