@@ -165,12 +165,23 @@ export async function iniciarTreino(form: FormData) {
   const { supabase, user } = await exigirUsuario();
   const treinoId = String(form.get("id") ?? "");
   const nome = String(form.get("nome") ?? "");
+
+  const { data: treino } = await supabase
+    .from("treinos")
+    .select("id,nome")
+    .eq("id", treinoId)
+    .eq("usuario_id", user.id)
+    .eq("ativo", true)
+    .single();
+
+  if (!treino) throw new Error("Treino indisponivel.");
+
   const { data, error } = await supabase
     .from("execucoes_treino")
     .insert({
       usuario_id: user.id,
       treino_id: treinoId,
-      nome_treino: nome,
+      nome_treino: nome || treino.nome,
     })
     .select("id")
     .single();
@@ -184,6 +195,27 @@ export async function registrarSerie(form: FormData) {
   const exercicioId = String(form.get("exercicio_id"));
   const nome = String(form.get("nome_exercicio"));
   const ordemExercicio = Number(form.get("ordem_exercicio") ?? 1);
+
+  const [{ data: execucao }, { data: exercicio }] = await Promise.all([
+    supabase
+      .from("execucoes_treino")
+      .select("id")
+      .eq("id", execucaoId)
+      .eq("usuario_id", user.id)
+      .eq("status", "EM_ANDAMENTO")
+      .single(),
+    supabase
+      .from("exercicios")
+      .select("id,nome")
+      .eq("id", exercicioId)
+      .eq("usuario_id", user.id)
+      .single(),
+  ]);
+
+  if (!execucao || !exercicio) {
+    throw new Error("Execucao ou exercicio indisponivel.");
+  }
+
   const { count } = await supabase
     .from("series_executadas")
     .select("id", { count: "exact", head: true })

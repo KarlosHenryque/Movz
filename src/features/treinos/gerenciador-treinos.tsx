@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ChevronDown,
   Circle,
   EllipsisVertical,
   Pencil,
@@ -441,7 +442,10 @@ function CardTreino({
     exerciciosOrdenados.length;
 
   const [menuAberto, setMenuAberto] = useState(false);
+  const [exerciciosVisiveis, setExerciciosVisiveis] =
+    useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const listaExerciciosId = `exercicios-${treino.id}`;
 
   useEffect(() => {
     function fecharAoClicarFora(event: MouseEvent) {
@@ -577,8 +581,11 @@ function CardTreino({
         </div>
       </div>
 
-      {totalExercicios > 0 ? (
-        <ul className="lista-exercicios lista-treino">
+      {exerciciosVisiveis && totalExercicios > 0 ? (
+        <ul
+          id={listaExerciciosId}
+          className="lista-exercicios lista-treino"
+        >
           {exerciciosOrdenados.map(
             (exercicio, indice) => (
               <li key={exercicio.id}>
@@ -624,13 +631,39 @@ function CardTreino({
             ),
           )}
         </ul>
-      ) : (
+      ) : totalExercicios === 0 ? (
         <p className="muted">
           Sem exercícios cadastrados.
         </p>
-      )}
+      ) : null}
 
       <div className="treino-rodape">
+        {totalExercicios > 0 && (
+          <button
+            type="button"
+            className="botao-exercicios"
+            aria-expanded={exerciciosVisiveis}
+            aria-controls={listaExerciciosId}
+            onClick={() =>
+              setExerciciosVisiveis(
+                (visivel) => !visivel,
+              )
+            }
+          >
+            <ChevronDown
+              size={18}
+              className={
+                exerciciosVisiveis
+                  ? "botao-exercicios-icone aberto"
+                  : "botao-exercicios-icone"
+              }
+            />
+            {exerciciosVisiveis
+              ? "Ocultar exercícios"
+              : `Ver exercícios (${totalExercicios})`}
+          </button>
+        )}
+
         {treino.ativo &&
           totalExercicios > 0 && (
             <form action={iniciarTreino}>
@@ -730,7 +763,7 @@ export function GerenciadorTreinos({
         Novo treino
       </button>
 
-      <div className="grade lista-cards">
+      <div className="lista-cards lista-treinos">
         {itens.map((treino) => (
           <CardTreino
             key={treino.id}

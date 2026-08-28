@@ -108,10 +108,17 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
   const dialog = useRef<HTMLDialogElement>(null);
 
   const filtrados = useMemo(
-    () =>
-      itens.filter((i) =>
-        `${i.nome} ${i.grupo_muscular}`.toLowerCase().includes(busca.toLowerCase())
-      ),
+    () => {
+      const termo = busca.trim().toLowerCase();
+
+      if (!termo) {
+        return itens;
+      }
+
+      return itens.filter((i) =>
+        `${i.nome} ${i.grupo_muscular}`.toLowerCase().includes(termo)
+      );
+    },
     [itens, busca]
   );
 
@@ -151,7 +158,7 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
         <Plus size={18} />
         Novo exercício
       </button>
-      <div className="grade lista-cards">
+      <div className="lista-cards">
         {filtrados.map((i) => (
           <article className="cartao" key={i.id}>
             <div className="linha">
