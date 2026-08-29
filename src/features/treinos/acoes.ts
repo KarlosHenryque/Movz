@@ -4,6 +4,76 @@ import { redirect } from "next/navigation";
 import { exigirUsuario } from "@/lib/autenticacao/usuario";
 import { limitesTreino } from "./regras";
 
+type ExercicioPlanejado = {
+  exercicio_id: string;
+  ordem: number;
+  series_planejadas: number;
+  repeticoes_planejadas: string;
+  carga_sugerida: number;
+  descanso_segundos: number;
+};
+
+function validarExercicioPlanejado(
+  exercicio: Omit<ExercicioPlanejado, "ordem">,
+) {
+  if (
+    !exercicio.exercicio_id ||
+    !Number.isInteger(exercicio.series_planejadas) ||
+    exercicio.series_planejadas < 1 ||
+    exercicio.series_planejadas > 20 ||
+    !exercicio.repeticoes_planejadas ||
+    exercicio.repeticoes_planejadas.length > limitesTreino.repeticoes ||
+    !Number.isFinite(exercicio.carga_sugerida) ||
+    exercicio.carga_sugerida < 0 ||
+    !Number.isInteger(exercicio.descanso_segundos) ||
+    exercicio.descanso_segundos < 0 ||
+    exercicio.descanso_segundos > 3600
+  ) {
+    throw new Error("Revise os dados dos exercícios do treino.");
+  }
+}
+
+function obterExerciciosPlanejados(form: FormData) {
+  const exerciciosCount = Number(form.get("exercicios_count") ?? 0);
+  if (
+    !Number.isInteger(exerciciosCount) ||
+    exerciciosCount < 0 ||
+    exerciciosCount > limitesTreino.exercicios
+  ) {
+    throw new Error("Quantidade de exercícios inválida.");
+  }
+
+  const exercicios: ExercicioPlanejado[] = [];
+  const ids = new Set<string>();
+
+  for (let i = 0; i < exerciciosCount; i++) {
+    const exercicio = {
+      exercicio_id: String(form.get(`exercicio_${i}_id`) ?? ""),
+      series_planejadas: Number(form.get(`exercicio_${i}_series`) ?? 3),
+      repeticoes_planejadas: String(
+        form.get(`exercicio_${i}_repeticoes`) ?? "10",
+      ).trim(),
+      carga_sugerida: Number(form.get(`exercicio_${i}_carga`) ?? 0),
+      descanso_segundos: Number(form.get(`exercicio_${i}_descanso`) ?? 60),
+    };
+
+    if (!exercicio.exercicio_id) continue;
+    validarExercicioPlanejado(exercicio);
+
+    if (ids.has(exercicio.exercicio_id)) {
+      throw new Error("Remova exercícios duplicados antes de salvar.");
+    }
+
+    ids.add(exercicio.exercicio_id);
+    exercicios.push({
+      ...exercicio,
+      ordem: exercicios.length + 1,
+    });
+  }
+
+  return exercicios;
+}
+
 export async function salvarTreino(form: FormData) {
   const { supabase, user } = await exigirUsuario();
   const id = String(form.get("id") ?? "");
@@ -15,6 +85,8 @@ export async function salvarTreino(form: FormData) {
     throw new Error("O nome do treino é muito longo.");
   if (descricao.length > limitesTreino.descricao)
     throw new Error("A descrição é muito longa.");
+
+  const exerciciosPlanejados = obterExerciciosPlanejados(form);
 
   const registro = {
     nome,
@@ -49,18 +121,7 @@ export async function salvarTreino(form: FormData) {
     treinoId = data.id;
   }
 
-  // Suporte para múltiplos exercícios
-  const exerciciosCount = Number(form.get("exercicios_count") ?? 0);
-  if (
-    !Number.isInteger(exerciciosCount) ||
-    exerciciosCount < 0 ||
-    exerciciosCount > limitesTreino.exercicios
-  ) {
-    throw new Error("Quantidade de exercícios inválida.");
-  }
-
-  // Limpar exercícios anteriores
-  if (id || exerciciosCount > 0 || form.get("exercicio_id")) {
+  if (id || exerciciosPlanejados.length > 0 || form.get("exercicio_id")) {
     const { error } = await supabase
       .from("exercicios_treino")
       .delete()
@@ -68,86 +129,44 @@ export async function salvarTreino(form: FormData) {
       .eq("usuario_id", user.id);
     if (error) {
       console.error("Erro ao limpar exercícios:", error);
-      throw new Error(`Não foi possível atualizar os exercícios do treino: ${error.message}`);
+      throw new Error(
+        `Não foi possível atualizar os exercícios do treino: ${error.message}`,
+      );
     }
   }
 
-  // Salvar múltiplos exercícios (novo formato)
-  if (exerciciosCount > 0) {
-    const exercicios: Array<{
-      usuario_id: string;
-      treino_id: string;
-      exercicio_id: string;
-      ordem: number;
-      series_planejadas: number;
-      repeticoes_planejadas: string;
-      carga_sugerida: number;
-      descanso_segundos: number;
-    }> = [];
-
-    for (let i = 0; i < exerciciosCount; i++) {
-      const exercicioId = String(form.get(`exercicio_${i}_id`) ?? "");
-      if (exercicioId) {
-        const series = Number(form.get(`exercicio_${i}_series`) ?? 3);
-        const repeticoes = String(
-          form.get(`exercicio_${i}_repeticoes`) ?? "10",
-        ).trim();
-        const carga = Number(form.get(`exercicio_${i}_carga`) ?? 0);
-        const descanso = Number(form.get(`exercicio_${i}_descanso`) ?? 60);
-        if (
-          !Number.isInteger(series) ||
-          series < 1 ||
-          series > 20 ||
-          !repeticoes ||
-          repeticoes.length > limitesTreino.repeticoes ||
-          !Number.isFinite(carga) ||
-          carga < 0 ||
-          !Number.isInteger(descanso) ||
-          descanso < 0 ||
-          descanso > 3600
-        ) {
-          throw new Error("Revise os dados dos exercícios do treino.");
-        }
-        exercicios.push({
-          usuario_id: user.id,
-          treino_id: treinoId,
-          exercicio_id: exercicioId,
-          ordem: i + 1,
-          series_planejadas: series,
-          repeticoes_planejadas: repeticoes,
-          carga_sugerida: carga,
-          descanso_segundos: descanso,
-        });
-      }
-    }
-
-    if (exercicios.length > 0) {
-      const { error } = await supabase
-        .from("exercicios_treino")
-        .insert(exercicios);
-      if (error) {
-        console.error("Erro ao associar exercícios:", error);
-        throw new Error(
-          `Treino salvo, mas não foi possível associar os exercícios: ${error.message}`,
-        );
-      }
+  if (exerciciosPlanejados.length > 0) {
+    const { error } = await supabase.from("exercicios_treino").insert(
+      exerciciosPlanejados.map((exercicio) => ({
+        usuario_id: user.id,
+        treino_id: treinoId,
+        ...exercicio,
+      })),
+    );
+    if (error) {
+      console.error("Erro ao associar exercícios:", error);
+      throw new Error(
+        `Treino salvo, mas não foi possível associar os exercícios: ${error.message}`,
+      );
     }
   } else {
-    // Suporte para formato antigo (compatibilidade)
-    const exercicio = String(form.get("exercicio_id") ?? "");
-    if (exercicio) {
-      const { error } = await supabase
-        .from("exercicios_treino")
-        .insert({
-          usuario_id: user.id,
-          treino_id: treinoId,
-          exercicio_id: exercicio,
-          ordem: 1,
-          series_planejadas: Number(form.get("series") ?? 3),
-          repeticoes_planejadas: String(form.get("repeticoes") ?? "10"),
-          carga_sugerida: Number(form.get("carga") ?? 0),
-          descanso_segundos: Number(form.get("descanso") ?? 60),
-        });
+    const exercicioId = String(form.get("exercicio_id") ?? "");
+    if (exercicioId) {
+      const exercicio = {
+        exercicio_id: exercicioId,
+        series_planejadas: Number(form.get("series") ?? 3),
+        repeticoes_planejadas: String(form.get("repeticoes") ?? "10").trim(),
+        carga_sugerida: Number(form.get("carga") ?? 0),
+        descanso_segundos: Number(form.get("descanso") ?? 60),
+      };
+      validarExercicioPlanejado(exercicio);
+
+      const { error } = await supabase.from("exercicios_treino").insert({
+        usuario_id: user.id,
+        treino_id: treinoId,
+        ordem: 1,
+        ...exercicio,
+      });
       if (error)
         throw new Error(
           "Treino salvo, mas não foi possível associar o exercício.",

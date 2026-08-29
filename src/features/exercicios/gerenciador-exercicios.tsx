@@ -11,6 +11,8 @@ type Exercicio = {
   id: string;
   nome: string;
   grupo_muscular: string;
+  descricao: string | null;
+  observacoes: string | null;
   ativo: boolean;
 };
 
@@ -24,15 +26,20 @@ function Formulario({
   const router = useRouter();
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const enviandoRef = useRef(false);
 
   const handleSalvar = async (formData: FormData) => {
+    if (enviandoRef.current) return;
+
     try {
+      enviandoRef.current = true;
       setErro(null);
       setCarregando(true);
       await salvarExercicio(formData);
       router.refresh();
       fechar();
     } catch (err: unknown) {
+      enviandoRef.current = false;
       setCarregando(false);
       if (err instanceof Error) {
         setErro(err.message);
@@ -75,6 +82,24 @@ function Formulario({
           ))}
         </select>
       </label>
+      <label>
+        Descrição
+        <textarea
+          name="descricao"
+          defaultValue={item?.descricao ?? ""}
+          disabled={carregando}
+          placeholder="Ex.: Movimento principal para peito"
+        />
+      </label>
+      <label>
+        Observações
+        <textarea
+          name="observacoes"
+          defaultValue={item?.observacoes ?? ""}
+          disabled={carregando}
+          placeholder="Ex.: Ajustar banco e amplitude conforme conforto"
+        />
+      </label>
       <label className="switch-campo">
         <span>Exercício ativo</span>
         <span className="switch">
@@ -106,6 +131,8 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
   const [carregandoExclusao, setCarregandoExclusao] = useState<string | null>(
     null,
   );
+  const [erro, setErro] = useState<string | null>(null);
+  const exclusaoRef = useRef<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
 
   const filtrados = useMemo(
@@ -134,13 +161,23 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
   };
 
   const handleExcluir = async (id: string, formData: FormData) => {
+    if (exclusaoRef.current) return;
+
     try {
+      exclusaoRef.current = id;
+      setErro(null);
       setCarregandoExclusao(id);
       await excluirExercicio(formData);
       router.refresh();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao excluir exercício:", err);
+      setErro(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível excluir o exercício.",
+      );
     } finally {
+      exclusaoRef.current = null;
       setCarregandoExclusao(null);
     }
   };
@@ -164,6 +201,11 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
         <Plus size={18} />
         Novo exercício
       </button>
+      {erro && (
+        <p className="alerta erro" role="alert">
+          {erro}
+        </p>
+      )}
       <div className="lista-cards lista-exercicios-cards">
         {filtrados.map((i) => (
           <article className="cartao cartao-exercicio" key={i.id}>
@@ -172,17 +214,17 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
                 <span className="selo neutro">{i.grupo_muscular}</span>
                 <h2>{i.nome}</h2>
               </div>
-
-              <span className={i.ativo ? "status ativo" : "status"}>
-                {i.ativo ? "Ativo" : "Inativo"}
-              </span>
             </div>
 
             <div className="acoes-item exercicio-acoes">
+              <span className={i.ativo ? "status ativo" : "status"}>
+                {i.ativo ? "Ativo" : "Inativo"}
+              </span>
               <button
                 type="button"
                 className="botao secundario"
                 onClick={() => abrir(i)}
+                disabled={carregandoExclusao !== null}
               >
                 <Pencil size={16} />
                 Editar

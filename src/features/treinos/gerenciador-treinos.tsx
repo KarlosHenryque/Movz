@@ -66,6 +66,7 @@ function FormularioTreino({
 
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const enviandoRef = useRef(false);
 
   const [exerciciosAdicionados, setExerciciosAdicionados] = useState<
     ExercicioForm[]
@@ -143,11 +144,10 @@ function FormularioTreino({
   };
 
   const handleSalvar = async (formData: FormData) => {
-    if (carregando) {
-      return;
-    }
+    if (enviandoRef.current) return;
 
     try {
+      enviandoRef.current = true;
       setErro(null);
       setCarregando(true);
 
@@ -190,6 +190,7 @@ function FormularioTreino({
       fechar();
     } catch (erro: unknown) {
       console.error("Erro ao salvar treino:", erro);
+      enviandoRef.current = false;
       setCarregando(false);
       if (erro instanceof Error) {
         setErro(erro.message);
@@ -513,6 +514,7 @@ function CardTreino({
             aria-expanded={menuAberto}
             aria-haspopup="menu"
             aria-label="Opções do treino"
+            disabled={carregandoExclusao !== null}
           >
             <Pencil size={18} />
           </button>
@@ -529,6 +531,7 @@ function CardTreino({
                   abrir(treino);
                   setMenuAberto(false);
                 }}
+                disabled={carregandoExclusao !== null}
               >
                 <Pencil size={16} />
                 Editar
@@ -715,6 +718,8 @@ export function GerenciadorTreinos({
     carregandoExclusao,
     setCarregandoExclusao,
   ] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const exclusaoRef = useRef<string | null>(null);
 
   const dialog =
     useRef<HTMLDialogElement>(null);
@@ -737,22 +742,28 @@ export function GerenciadorTreinos({
     id: string,
     formData: FormData,
   ) => {
-    if (carregandoExclusao) {
-      return;
-    }
+    if (exclusaoRef.current) return;
 
     try {
+      exclusaoRef.current = id;
+      setErro(null);
       setCarregandoExclusao(id);
 
       await excluirTreino(formData);
 
       router.refresh();
-    } catch (erro) {
+    } catch (erro: unknown) {
       console.error(
         "Erro ao excluir treino:",
         erro,
       );
+      setErro(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível excluir o treino.",
+      );
     } finally {
+      exclusaoRef.current = null;
       setCarregandoExclusao(null);
     }
   };
@@ -767,6 +778,11 @@ export function GerenciadorTreinos({
         <Plus size={18} />
         Novo treino
       </button>
+      {erro && (
+        <p className="alerta erro" role="alert">
+          {erro}
+        </p>
+      )}
 
       <div className="lista-cards">
         {itens.map((treino) => (
