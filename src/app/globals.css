@@ -60,7 +60,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .selo.neutro { background:#edf1eb; color:var(--verde); }
 .status { padding:6px 9px; border-radius:99px; background:#eee; color:#666; font-size:.72rem; font-weight:700; }
 .status.ativo { background:#e8f6ec; color:#22663b; }
-.lista-cards { display:grid; gap:12px; margin-top:16px; }
+.lista-cards, .grade.lista-cards { display:grid; grid-template-columns:1fr; width:100%; gap:12px; margin-top:16px; }
 .lista-cards .cartao h2 { margin:10px 0 4px; }
 .acoes-item { display:flex; align-items:center; gap:8px; margin-top:14px; }
 .acoes-item form { display:flex; }

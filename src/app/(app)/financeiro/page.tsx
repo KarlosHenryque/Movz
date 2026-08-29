@@ -11,7 +11,6 @@ export default async function Page() {
     supabase
       .from("categorias_financeiras")
       .select("id,nome")
-      .eq("usuario_id", user.id)
       .eq("ativa", true)
       .order("nome"),
     supabase

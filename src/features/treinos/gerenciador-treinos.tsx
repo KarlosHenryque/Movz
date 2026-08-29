@@ -767,7 +767,7 @@ export function GerenciadorTreinos({
         Novo treino
       </button>
 
-      <div className="lista-cards lista-treinos">
+      <div className="lista-cards">
         {itens.map((treino) => (
           <CardTreino
             key={treino.id}
