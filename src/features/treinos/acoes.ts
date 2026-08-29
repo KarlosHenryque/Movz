@@ -32,14 +32,20 @@ export async function salvarTreino(form: FormData) {
       .update(registro)
       .eq("id", id)
       .eq("usuario_id", user.id);
-    if (error) throw new Error("Não foi possível editar o treino.");
+    if (error) {
+      console.error("Erro ao atualizar treino:", error);
+      throw new Error(`Não foi possível editar o treino: ${error.message}`);
+    }
   } else {
     const { data, error } = await supabase
       .from("treinos")
       .insert(registro)
       .select("id")
       .single();
-    if (error) throw new Error("Não foi possível criar o treino.");
+    if (error) {
+      console.error("Erro ao criar treino:", error);
+      throw new Error(`Não foi possível criar o treino: ${error.message}`);
+    }
     treinoId = data.id;
   }
 
@@ -60,8 +66,10 @@ export async function salvarTreino(form: FormData) {
       .delete()
       .eq("treino_id", treinoId)
       .eq("usuario_id", user.id);
-    if (error)
-      throw new Error("Não foi possível atualizar os exercícios do treino.");
+    if (error) {
+      console.error("Erro ao limpar exercícios:", error);
+      throw new Error(`Não foi possível atualizar os exercícios do treino: ${error.message}`);
+    }
   }
 
   // Salvar múltiplos exercícios (novo formato)
@@ -117,10 +125,12 @@ export async function salvarTreino(form: FormData) {
       const { error } = await supabase
         .from("exercicios_treino")
         .insert(exercicios);
-      if (error)
+      if (error) {
+        console.error("Erro ao associar exercícios:", error);
         throw new Error(
-          "Treino salvo, mas não foi possível associar os exercícios.",
+          `Treino salvo, mas não foi possível associar os exercícios: ${error.message}`,
         );
+      }
     }
   } else {
     // Suporte para formato antigo (compatibilidade)

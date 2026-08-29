@@ -5,8 +5,8 @@ import { concluirTreino, registrarSerie } from "@/features/treinos/acoes";
 import { exigirUsuario } from "@/lib/autenticacao/usuario";
 
 type Plano = {
-  id: number;
-  exercicio_id: number;
+  id: string;
+  exercicio_id: string;
   ordem: number;
   series_planejadas: number;
   repeticoes_planejadas: string;
@@ -74,7 +74,7 @@ export default async function Page({
           <p className="muted">Todos os exercícios da ficha foram concluídos.</p>
           <form action={concluirTreino}>
             <input type="hidden" name="execucao_id" value={id} />
-            <button className="botao primario">Finalizar treino</button>
+            <button type="submit" className="botao primario">Finalizar treino</button>
           </form>
         </section>
       ) : (
@@ -96,7 +96,7 @@ export default async function Page({
                 <label>Carga (kg)<input name="carga" type="number" min="0" step="0.5" defaultValue={planoAtual.carga_sugerida ?? 0} required /></label>
                 <label>Repetições<input name="repeticoes" type="number" min="0" defaultValue={Number.parseInt(planoAtual.repeticoes_planejadas) || 10} required /></label>
               </div>
-              <button className="botao primario">Concluir série</button>
+              <button type="submit" className="botao primario">Concluir série</button>
             </form>
           </section>
           <Cronometro segundosIniciais={planoAtual.descanso_segundos} />

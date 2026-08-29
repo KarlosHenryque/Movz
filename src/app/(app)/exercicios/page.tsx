@@ -6,7 +6,7 @@ export default async function Page() {
   const { supabase, user } = await exigirUsuario();
   const { data, error } = await supabase
     .from("exercicios")
-    .select("id,nome,grupo_muscular,descricao,observacoes,ativo")
+    .select("id,nome,grupo_muscular,ativo")
     .eq("usuario_id", user.id)
     .order("nome");
 

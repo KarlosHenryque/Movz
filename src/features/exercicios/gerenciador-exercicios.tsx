@@ -1,4 +1,5 @@
 "use client";
+
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
@@ -10,8 +11,6 @@ type Exercicio = {
   id: string;
   nome: string;
   grupo_muscular: string;
-  descricao: string | null;
-  observacoes: string | null;
   ativo: boolean;
 };
 
@@ -24,30 +23,42 @@ function Formulario({
 }) {
   const router = useRouter();
   const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   const handleSalvar = async (formData: FormData) => {
     try {
+      setErro(null);
       setCarregando(true);
       await salvarExercicio(formData);
       router.refresh();
       fechar();
-    } catch (err) {
+    } catch (err: unknown) {
       setCarregando(false);
-      throw err;
+      if (err instanceof Error) {
+        setErro(err.message);
+      } else {
+        setErro("Não foi possível salvar o exercício.");
+      }
     }
   };
 
   return (
     <form action={handleSalvar} className="formulario">
+      {erro && (
+        <p className="alerta erro" role="alert">
+          {erro}
+        </p>
+      )}
       <input type="hidden" name="id" value={item?.id ?? ""} />
       <label>
         Nome
         <input
           name="nome"
-          defaultValue={item?.nome}
+          defaultValue={item?.nome ?? ""}
           required
           minLength={2}
           disabled={carregando}
+          placeholder="Ex.: Supino Reto"
         />
       </label>
       <label>
@@ -58,25 +69,11 @@ function Formulario({
           disabled={carregando}
         >
           {gruposMusculares.map((g) => (
-            <option key={g}>{g}</option>
+            <option key={g} value={g}>
+              {g}
+            </option>
           ))}
         </select>
-      </label>
-      <label>
-        Descrição
-        <textarea
-          name="descricao"
-          defaultValue={item?.descricao ?? ""}
-          disabled={carregando}
-        />
-      </label>
-      <label>
-        Observações
-        <textarea
-          name="observacoes"
-          defaultValue={item?.observacoes ?? ""}
-          disabled={carregando}
-        />
       </label>
       <label className="switch-campo">
         <span>Exercício ativo</span>
@@ -91,8 +88,12 @@ function Formulario({
           <span className="switch-slider" aria-hidden="true" />
         </span>
       </label>
-      <button className="botao primario" disabled={carregando}>
-        {carregando ? "Salvando..." : "Salvar exercício"}
+      <button type="submit" className="botao primario" disabled={carregando}>
+        {carregando
+          ? "Salvando..."
+          : item
+            ? "Salvar alterações"
+            : "Salvar exercício"}
       </button>
     </form>
   );
@@ -103,7 +104,7 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState<Exercicio | null | undefined>();
   const [carregandoExclusao, setCarregandoExclusao] = useState<string | null>(
-    null
+    null,
   );
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -119,7 +120,7 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
         `${i.nome} ${i.grupo_muscular}`.toLowerCase().includes(termo)
       );
     },
-    [itens, busca]
+    [itens, busca],
   );
 
   const abrir = (i: Exercicio | null) => {
@@ -138,8 +139,9 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
       await excluirExercicio(formData);
       router.refresh();
     } catch (err) {
+      console.error("Erro ao excluir exercício:", err);
+    } finally {
       setCarregandoExclusao(null);
-      throw err;
     }
   };
 
@@ -154,7 +156,11 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
           aria-label="Buscar exercícios"
         />
       </div>
-      <button className="botao primario" onClick={() => abrir(null)}>
+      <button
+        type="button"
+        className="botao primario"
+        onClick={() => abrir(null)}
+      >
         <Plus size={18} />
         Novo exercício
       </button>
@@ -165,7 +171,6 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
               <div className="exercicio-identificacao">
                 <span className="selo neutro">{i.grupo_muscular}</span>
                 <h2>{i.nome}</h2>
-                {i.descricao && <p className="muted">{i.descricao}</p>}
               </div>
 
               <span className={i.ativo ? "status ativo" : "status"}>
@@ -175,6 +180,7 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
 
             <div className="acoes-item exercicio-acoes">
               <button
+                type="button"
                 className="botao secundario"
                 onClick={() => abrir(i)}
               >
@@ -194,6 +200,7 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
               >
                 <input type="hidden" name="id" value={i.id} />
                 <button
+                  type="submit"
                   className="botao perigo"
                   disabled={carregandoExclusao === i.id}
                 >

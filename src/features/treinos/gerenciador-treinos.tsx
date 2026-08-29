@@ -5,15 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   Circle,
-  EllipsisVertical,
   Pencil,
-  Play,
   Plus,
   Trash2,
 } from "lucide-react";
 import { Modal } from "@/components/modal";
-import { BotaoSubmit } from "@/components/botao-submit";
-
 import {
   excluirTreino,
   iniciarTreino,
@@ -21,13 +17,13 @@ import {
 } from "./acoes";
 
 type Exercicio = {
-  id: number;
+  id: string;
   nome: string;
 };
 
 type ExercicioTreino = {
-  id: number;
-  exercicio_id: number;
+  id: string;
+  exercicio_id: string;
   ordem: number;
   series_planejadas: number;
   repeticoes_planejadas: string;
@@ -41,7 +37,7 @@ type ExercicioTreino = {
 };
 
 type Treino = {
-  id: number;
+  id: string;
   nome: string;
   descricao: string | null;
   ativo: boolean;
@@ -49,7 +45,7 @@ type Treino = {
 };
 
 type ExercicioForm = {
-  exercicio_id: number;
+  exercicio_id: string;
   series: string;
   repeticoes: string;
   carga: string;
@@ -69,6 +65,7 @@ function FormularioTreino({
   const router = useRouter();
 
   const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   const [exerciciosAdicionados, setExerciciosAdicionados] = useState<
     ExercicioForm[]
@@ -83,10 +80,10 @@ function FormularioTreino({
     })) ?? [],
   );
 
-  const [selecionadoAtual, setSelecionadoAtual] = useState<number | null>(null);
+  const [selecionadoAtual, setSelecionadoAtual] = useState<string | null>(null);
 
   const adicionarExercicio = () => {
-    if (selecionadoAtual === null) {
+    if (!selecionadoAtual) {
       return;
     }
 
@@ -151,12 +148,13 @@ function FormularioTreino({
     }
 
     try {
+      setErro(null);
       setCarregando(true);
 
       exerciciosAdicionados.forEach((exercicio, indice) => {
         formData.append(
           `exercicio_${indice}_id`,
-          String(exercicio.exercicio_id),
+          exercicio.exercicio_id,
         );
 
         formData.append(
@@ -190,14 +188,25 @@ function FormularioTreino({
       router.refresh();
 
       fechar();
-    } catch (erro) {
+    } catch (erro: unknown) {
       console.error("Erro ao salvar treino:", erro);
       setCarregando(false);
+      if (erro instanceof Error) {
+        setErro(erro.message);
+      } else {
+        setErro("Não foi possível salvar o treino. Tente novamente.");
+      }
     }
   };
 
   return (
     <form action={handleSalvar} className="formulario">
+      {erro && (
+        <p className="alerta erro" role="alert">
+          {erro}
+        </p>
+      )}
+
       <input
         type="hidden"
         name="id"
@@ -206,7 +215,6 @@ function FormularioTreino({
 
       <label>
         Nome
-
         <input
           name="nome"
           defaultValue={item?.nome ?? ""}
@@ -218,7 +226,6 @@ function FormularioTreino({
 
       <label>
         Descrição
-
         <textarea
           name="descricao"
           defaultValue={item?.descricao ?? ""}
@@ -233,14 +240,11 @@ function FormularioTreino({
         <div className="adicionar-exercicio">
           <label>
             Adicionar exercício
-
             <select
               value={selecionadoAtual ?? ""}
               onChange={(event) =>
                 setSelecionadoAtual(
-                  event.target.value
-                    ? Number(event.target.value)
-                    : null,
+                  event.target.value || null,
                 )
               }
               disabled={carregando}
@@ -264,10 +268,9 @@ function FormularioTreino({
             type="button"
             className="botao primario"
             onClick={adicionarExercicio}
-            disabled={selecionadoAtual === null || carregando}
+            disabled={!selecionadoAtual || carregando}
           >
             <Plus size={16} />
-
             Adicionar
           </button>
         </div>
@@ -306,7 +309,6 @@ function FormularioTreino({
                   <div className="campos-duplos tarefa-editor-campos">
                     <label>
                       Séries
-
                       <input
                         type="number"
                         min="1"
@@ -325,7 +327,6 @@ function FormularioTreino({
 
                     <label>
                       Repetições
-
                       <input
                         type="text"
                         value={exercicio.repeticoes}
@@ -343,7 +344,6 @@ function FormularioTreino({
 
                     <label>
                       Carga (kg)
-
                       <input
                         type="number"
                         min="0"
@@ -362,7 +362,6 @@ function FormularioTreino({
 
                     <label>
                       Descanso (s)
-
                       <input
                         type="number"
                         min="0"
@@ -432,9 +431,9 @@ function CardTreino({
 }: {
   treino: Treino;
   abrir: (treino: Treino) => void;
-  carregandoExclusao: number | null;
+  carregandoExclusao: string | null;
   handleExcluir: (
-    id: number,
+    id: string,
     formData: FormData,
   ) => Promise<void>;
 }) {
@@ -508,14 +507,14 @@ function CardTreino({
           <button
             type="button"
             className="menu-acoes-botao"
-            aria-label="Mais opções"
-            aria-expanded={menuAberto}
-            aria-haspopup="menu"
             onClick={() =>
               setMenuAberto((aberto) => !aberto)
             }
+            aria-expanded={menuAberto}
+            aria-haspopup="menu"
+            aria-label="Opções do treino"
           >
-            <EllipsisVertical size={21} />
+            <Pencil size={18} />
           </button>
 
           {menuAberto && (
@@ -527,8 +526,8 @@ function CardTreino({
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  setMenuAberto(false);
                   abrir(treino);
+                  setMenuAberto(false);
                 }}
               >
                 <Pencil size={16} />
@@ -537,16 +536,19 @@ function CardTreino({
 
               <form
                 action={(formData) =>
-                  handleExcluir(
-                    treino.id,
-                    formData,
-                  )
+                  handleExcluir(treino.id, formData)
                 }
                 onSubmit={(event) => {
                   if (
                     carregandoExclusao ===
-                      treino.id ||
-                    !window.confirm(
+                    treino.id
+                  ) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  if (
+                    !confirm(
                       `Deseja excluir o treino "${treino.nome}"?`,
                     )
                   ) {
@@ -683,13 +685,12 @@ function CardTreino({
                 value={treino.nome}
               />
 
-              <BotaoSubmit
+              <button
+                type="submit"
                 className="botao primario iniciar-treino"
-                pendente="Iniciando..."
               >
-                <Play size={17} />
                 Iniciar treino
-              </BotaoSubmit>
+              </button>
             </form>
           )}
       </div>
@@ -713,7 +714,7 @@ export function GerenciadorTreinos({
   const [
     carregandoExclusao,
     setCarregandoExclusao,
-  ] = useState<number | null>(null);
+  ] = useState<string | null>(null);
 
   const dialog =
     useRef<HTMLDialogElement>(null);
@@ -733,7 +734,7 @@ export function GerenciadorTreinos({
   };
 
   const handleExcluir = async (
-    id: number,
+    id: string,
     formData: FormData,
   ) => {
     if (carregandoExclusao) {

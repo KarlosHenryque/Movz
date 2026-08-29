@@ -7,8 +7,6 @@ function dados(form: FormData) {
   return {
     nome: form.get("nome"),
     grupo_muscular: form.get("grupo_muscular"),
-    descricao: String(form.get("descricao") ?? ""),
-    observacoes: String(form.get("observacoes") ?? ""),
     ativo: form.get("ativo") === "true",
   };
 }
