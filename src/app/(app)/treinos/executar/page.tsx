@@ -5,8 +5,8 @@ import { concluirTreino, registrarSerie } from "@/features/treinos/acoes";
 import { exigirUsuario } from "@/lib/autenticacao/usuario";
 
 type Plano = {
-  id: string;
-  exercicio_id: string;
+  id: number;
+  exercicio_id: number;
   ordem: number;
   series_planejadas: number;
   repeticoes_planejadas: string;

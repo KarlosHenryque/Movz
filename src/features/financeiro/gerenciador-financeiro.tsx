@@ -7,8 +7,8 @@ import { BotaoSubmit } from "@/components/botao-submit";
 import { Modal } from "@/components/modal";
 import { excluirDespesa, salvarDespesa } from "./acoes";
 
-type Categoria = { id: string; nome: string };
-type Despesa = { id: string; descricao: string; valor: number; data: string; tipo: "FIXA" | "VARIAVEL"; observacao: string | null; categoria_id: string; categorias_financeiras: { nome: string } | null };
+type Categoria = { id: number; nome: string };
+type Despesa = { id: number; descricao: string; valor: number; data: string; tipo: "FIXA" | "VARIAVEL"; observacao: string | null; categoria_id: number; categorias_financeiras: { nome: string } | null };
 const dinheiro = (valor: number) => valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function FormularioDespesa({ item, categorias, fechar }: { item?: Despesa; categorias: Categoria[]; fechar: () => void }) {

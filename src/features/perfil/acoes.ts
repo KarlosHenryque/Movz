@@ -34,10 +34,10 @@ export async function atualizarPerfil(
   const { error } = await supabase
     .from("perfis")
     .upsert({
-      id: user.id,
+      usuario_id: user.id,
       ...validacao.data,
       atualizado_em: new Date().toISOString(),
-    });
+    }, { onConflict: "usuario_id" });
   if (error) return { erro: "Não foi possível salvar seus dados." };
   revalidatePath("/perfil");
   return { sucesso: "Dados pessoais atualizados." };

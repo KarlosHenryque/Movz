@@ -158,20 +158,22 @@ export function GerenciadorExercicios({ itens }: { itens: Exercicio[] }) {
         <Plus size={18} />
         Novo exercício
       </button>
-      <div className="lista-cards">
+      <div className="lista-cards lista-exercicios-cards">
         {filtrados.map((i) => (
-          <article className="cartao" key={i.id}>
-            <div className="linha">
-              <div>
+          <article className="cartao cartao-exercicio" key={i.id}>
+            <div className="exercicio-cabecalho">
+              <div className="exercicio-identificacao">
                 <span className="selo neutro">{i.grupo_muscular}</span>
                 <h2>{i.nome}</h2>
+                {i.descricao && <p className="muted">{i.descricao}</p>}
               </div>
+
               <span className={i.ativo ? "status ativo" : "status"}>
                 {i.ativo ? "Ativo" : "Inativo"}
               </span>
             </div>
-            {i.descricao && <p className="muted">{i.descricao}</p>}
-            <div className="acoes-item">
+
+            <div className="acoes-item exercicio-acoes">
               <button
                 className="botao secundario"
                 onClick={() => abrir(i)}

@@ -7,7 +7,7 @@ export default async function Page() {
   const { data } = await supabase
     .from("perfis")
     .select("nome, altura_cm, peso_kg")
-    .eq("id", user.id)
+    .eq("usuario_id", user.id)
     .maybeSingle();
   return (
     <>
